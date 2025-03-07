@@ -1,69 +1,71 @@
 // ==UserScript==
 // @name         Twitch Cookie Rejector
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Automatically rejects Twitch cookie requests.
-// @author       You
+// @author       Dragoo
 // @match        *://*.twitch.tv/*
 // @grant        none
 // ==/UserScript==
 
-(function() {
-    'use strict';
+(function () {
+  "use strict";
 
-    let rejectClicked = false;
+  let rejectClicked = false;
+  let retries = 20;
+  let observer;
 
-    function findRejectButton() {
-      const buttons = document.querySelectorAll("button.ScCoreButton-sc-ocjdkq-0");
-      for (let button of buttons) {
-        const buttonText = button.textContent.trim();
-        if (buttonText === "Reject") {
-          console.log("Reject button found.");
-          return button;
-        }
-      }
-      console.log("Reject button not found.");
-      return null;
-    }
-
-    function rejectCookies() {
-      if (rejectClicked) {
-        console.log("Reject button already clicked, relaxing now.");
-        return;
-      }
-      const button = findRejectButton();
-      if (button) {
-        button.click();
-        rejectClicked = true;
-        console.log("Twitch cookie request rejected.");
+  function findRejectButton() {
+    const buttons = document.querySelectorAll(
+      "button.ScCoreButton-sc-ocjdkq-0"
+    );
+    for (let button of buttons) {
+      const buttonText = button.textContent.trim();
+      if (buttonText === "Reject") {
+        console.log("Reject button found.");
+        return button;
       }
     }
+    return null;
+  }
 
-    // Retry logic: try clicking the button every second up to 20 times
-    let retries = 20;
-    let interval = setInterval(() => {
-      if (rejectClicked) {
-        clearInterval(interval);
-        console.log("Relaxing: Reject button has been handled.");
-        return;
-      }
-      rejectCookies();
-      retries--;
-      if (retries <= 0) {
-        clearInterval(interval);
-        console.log("Stopped trying to find Reject button.");
-      }
-    }, 1000);
+  function rejectCookies() {
+    if (rejectClicked) {
+      return;
+    }
+    const button = findRejectButton();
+    if (button) {
+      button.click();
+      rejectClicked = true;
+      console.log("Twitch cookie request rejected.");
+    }
+  }
 
-    // MutationObserver fallback in case the button is loaded dynamically
-    const observer = new MutationObserver(() => {
-      if (!rejectClicked) {
-        rejectCookies();
-      } else {
+  // Attempt to find/click the "Reject" button every second, up to 20 times
+  const interval = setInterval(() => {
+    // If already clicked or out of tries, stop
+    if (rejectClicked || retries <= 0) {
+      clearInterval(interval);
+      if (observer) {
         observer.disconnect();
-        console.log("Relaxing: MutationObserver disconnected.");
       }
-    });
+      console.log("Stopped searching for the Reject button.");
+      return;
+    }
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    rejectCookies();
+    retries--;
+  }, 1000);
+
+  // Fallback: monitor the DOM in case the banner is dynamically inserted later
+  observer = new MutationObserver(() => {
+    if (!rejectClicked) {
+      rejectCookies();
+    } else {
+      // Once we've clicked, no need to observe
+      observer.disconnect();
+      console.log("MutationObserver disconnected after rejecting cookies.");
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 })();
