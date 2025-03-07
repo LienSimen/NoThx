@@ -2,7 +2,7 @@
 
 Requires tampermonkey. Just slap the script into it. Worked on firefox and librewolf. Didnt make it work on chrome but easy solution is just dont use Chrome.
 
-You can eighter download it press "Create new script" and copy below;
+You can eighter download script or press "Create new script" and copy below;
 
 ```
 // ==UserScript==
@@ -74,5 +74,4 @@ You can eighter download it press "Create new script" and copy below;
     });
     observer.observe(document.body, { childList: true, subtree: true });
 })();
-
 ```
